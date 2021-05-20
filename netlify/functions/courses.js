@@ -38,38 +38,72 @@ let firebase = require(`./firebase`)
 exports.handler = async function(event) {
 
   // get the course number being requested
+  // console.log(event)
+  let courseNumber = event.queryStringParameters.courseNumber
+  console.log(courseNumber)
 
   // establish a connection to firebase in memory
+  let db = firebase.firestore()
 
   // ask Firebase for the course that corresponds to the course number, wait for the response
+  let courseQuery = await db.collection(`courses`).where(`courseNumber`, `==`, courseNumber).get()
 
   // get the first document from the query
+  let course = courseQuery.docs[0]
 
   // get the id from the document
+  let courseId = course.id
+  // console.log(courseId)
 
   // get the data from the document
-
+  let courseData = course.data()
+  // console.log(courseData)
   // create an object with the course data to hold the return value from our lambda
-
+  let returnValue = {
+    courseNumber: courseData.courseNumber,
+    name: courseData.name
+  }
+  // console.log(returnValue)
   // set a new Array as part of the return value
+  returnValue.sections = []
 
   // ask Firebase for the sections corresponding to the Document ID of the course, wait for the response
+  let sectionsQuery = await db.collection(`sections`).where(`courseId`, `==`, courseId).get()
+  // console.log(sectionsQuery)
 
   // get the documents from the query
-
+  let sections = sectionsQuery.docs
+  console.log(sections)
+  
   // loop through the documents
+  for (let i = 0; i , sections.length; i++) {
+      
     // get the document ID of the section
-    // get the data from the section
-    // create an Object to be added to the return value of our lambda
-    // ask Firebase for the lecturer with the ID provided by the section; hint: read "Retrieve One Document (when you know the Document ID)" in the reference
-    // get the data from the returned document
-    // add the lecturer's name to the section Object
-    // add the section Object to the return value
-    // 🔥 your code for the reviews/ratings goes here
+    let sectionId = sections[i].id
 
+    // get the data from the section
+    let sectionData = sections[i].data()
+
+    // create an Object to be added to the return value of our lambda
+    let sectionObject = {}
+
+    // ask Firebase for the lecturer with the ID provided by the section; hint: read "Retrieve One Document (when you know the Document ID)" in the reference
+    let lecturerQuery = await db.collection(`lecturers`).doc(sectionData.lecturerId).get()
+    
+    // get the data from the returned document
+    let lecturer = lecturerQuery.data()
+
+    // add the lecturer's name to the section Object
+    sectionObject.lecturerName = lecturer.name
+
+    // add the section Object to the return value
+    returnValue.sections.push(sectionObject)
+
+    // 🔥 your code for the reviews/ratings goes here
+  }
   // return the standard response
   return {
     statusCode: 200,
-    body: `Hello from the back-end!`
+    body: JSON.stringify(returnValue)
   }
 }
